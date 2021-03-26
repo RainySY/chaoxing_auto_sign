@@ -1,10 +1,26 @@
+关于扫码签到，API版本新增字段`enc`，这对于动态二维码有些许帮助。
+
+那么，我将如何获得`enc`参数呢？
+
+您需要解码二维码，使用手机扫一扫 或者 [草料二维码](https://cli.im/deqr) 反解码
+
+![](http://cdn.z2blog.com/123.gif)
+
 ## 功能描述
 
 - 登录方式：
 
-支持手机号码登录，支持学号登录
+支持手机号码登录和学号登录
 
 - 签到功能：
+
+健康打卡：
+
+支持腾讯云函数，设置定时触发自动打卡
+
+详情： https://github.com/mkdir700/chaoxing_auto_sign/tree/latest/heath
+
+课程签到：
 
 支持普通签到，手势签到，二维码签到，位置签到，拍照签到
 
@@ -23,18 +39,28 @@
 ## 项目目录
 
 ```
-├── api
+├── api                         # 课堂签到（API）
 │   ├── cloud_sign.py
 │   ├── config.py
 │   ├── db_handler.py
 │   ├── main.py
+│   ├── readme.md
 │   ├── requirements.txt
-│   └── sign_in_script.py
-├── local
-│   ├── cloud_sign.py
+│   └── sign_script.py
+├── heath                       # 健康日报
+│   ├── main.py
+│   └── readme.md
+├── local                       # 课程签到（本地）
 │   ├── config.py
+│   ├── image
+│   │   └── 深度截图_选择区域_20200522103426.png
+│   ├── local_sign.py
+│   ├── log.py
+│   ├── logs.log
 │   └── requirements.txt
-└── readme.md
+├── __pycache__
+├── readme.md
+└── start.sh
 ```
 
 - 多人使用：
@@ -95,7 +121,8 @@ params = {
     'username': 'xxxxx',
     'password': 'xxxxx',
     'schoolid': '',
-    'sckey': ''
+    'sckey': '',
+    'enc': ''  #  扫码签到必填
 }
 requests.post('http://101.89.182.58:9090/sign', params=params)
 
@@ -113,9 +140,10 @@ requests.get('http://101.89.182.58:9090/sign?username={}&password={}'.format(use
 | 请求方式 |   参数   |  说明  | 是否必须 |
 | :------: | :------: | :----: | :------: |
 |          | username |  账号  |    是    |
-|   **POST/GET**   | password |  密码  |    是    |
-|          | schoolid | 学校ID |    否    |
+|     | password |  密码  |    是    |
+|   **POST/GET**       | schoolid | 学校ID |    否    |
 | | sckey | server酱key | 否 |
+| | enc | 扫码签到参数 | 扫码签到必填 |
 
 
 **如果是学号登录，fid参数必填**

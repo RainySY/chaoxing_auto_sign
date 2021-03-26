@@ -10,8 +10,8 @@ from lxml import etree
 from bs4 import BeautifulSoup
 from apscheduler.schedulers.blocking import BlockingScheduler
 requests.packages.urllib3.disable_warnings()
-from config import *
 from log import log_error_msg
+from config import *
 
 
 class AutoSign(object):
@@ -70,17 +70,14 @@ class AutoSign(object):
             print('cookie状态:', end=' ')
             # 检测cookies是否有效
             r = self.session.get(
-                'http://notice.chaoxing.com/pc/notice/getUnitList', allow_redirects=False)
+                'http://mooc1-1.chaoxing.com/api/workTestPendingNew',
+                allow_redirects=False)
             if r.status_code != 200:
                 print("失效, 正在重新登录")
                 return False
             else:
-                r = r.json()
-                if r['status']:
-                    print("有效")
-                    return True
-            print("失效, 正在重新登录")
-            return False
+                print("有效!")
+                return True
 
     def login(self):
         # 登录-手机邮箱登录
@@ -153,11 +150,9 @@ class AutoSign(object):
     async def get_activeid(self, classid, courseid, classname):
         """访问任务面板获取课程的活动id"""
         re_rule = r'([\d]+),2'
-        await asyncio.sleep(1)
         r = self.session.get(
             'https://mobilelearn.chaoxing.com/widget/pcpick/stu/index?courseId={}&jclassId={}'.format(
                 courseid, classid), headers=self.headers, verify=False)
-        # res = re.findall(re_rule, r.text)
         res = []
         h = etree.HTML(r.text)
         activeid_list = h.xpath('//*[@id="startList"]/div/div/@onclick')
@@ -167,7 +162,6 @@ class AutoSign(object):
                 continue
             sign_type = self.get_sign_type(classid, courseid, activeid[0])
             res.append((activeid[0], sign_type[0]))
-
         n = len(res)
         if n:
             d = {'num': n, 'class': {}}
@@ -347,6 +341,7 @@ class AutoSign(object):
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(asyncio.gather(*tasks))
         loop.close()
+
         for r in result:
             if r:
                 for d in r['class'].values():
@@ -396,31 +391,32 @@ def server_chan_send(msgs):
 
 
 @log_error_msg
-def gen_run():
-    """本地运行使用"""
-    s = AutoSign(USER_INFO['username'], USER_INFO['password'])
-    login_status = s.set_cookies()
+def gen_run(username, password):
+    """运行"""
+    auto_sign = AutoSign(username, password)
+    login_status = auto_sign.login()
     if login_status != 1000:
         return {
             'msg': login_status,
             'detail': '登录失败，' + STATUS_CODE_DICT[login_status]
         }
 
-    result = s.sign_tasks_run()
+    result = auto_sign.sign_tasks_run()
     detail = result['detail']
-    if result['msg'] == 2001:
-        if SERVER_CHAN['status']:
-            server_chan_send(detail)
+    # if result['msg'] == 2001:
+    #     if SERVER_CHAN['status']:
+    #         server_chan_send(detail)
     return detail
 
 
 def local_run():
     print("="*50)
     print("[{}]".format(time.strftime('%Y-%m-%d %H:%M:%S')))
-    print(
-        "签到状态: ",
-        gen_run()
-    )
+    for info in USER_INFOS:
+        print(
+            "签到状态: ",
+            gen_run(info['username'], info['password'])
+        )
 
 
 if __name__ == '__main__':

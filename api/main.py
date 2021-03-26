@@ -1,14 +1,73 @@
-import os
-from fastapi import FastAPI, BackgroundTasks
-from cloud_sign import *
+import asyncio
+import uvicorn
+from typing import Optional
+from fastapi import FastAPI
+from pydantic import BaseModel
+from aiohttp import ClientSession, TCPConnector
+import cloud_sign
+from cloud_sign import HEADERS
 
 app = FastAPI()
 
 
-@app.post('/sign')
+class User(BaseModel):
+    username: str
+    password: str
+    schoolid: Optional[str] = None
+    sckey: Optional[str] = None
+
+
 @app.get('/sign')
-async def sign(*, username: str, password: str, schoolid=None, sckey=None,
-               background_tasks: BackgroundTasks):
-    user_info = {'username': username, 'password': password, 'schoolid': schoolid}
-    background_tasks.add_task(interface, user_info, sckey)
-    return {'message': '您的请求已收到,签到任务正在排队进行中'}
+@app.post('/sign')
+async def sign(username: str,
+               password: str,
+               schoolid: Optional[str] = None,
+               sckey: Optional[str] = None,
+               enc: Optional[str] = None) -> dict:
+    """
+    签到接口\n
+    @param username: 手机号 邮箱 学号\n
+    @param password: 密码\n
+    @param schoolid: 学校id[仅学号登录填写]\n
+    @param sckey: 废弃\n
+    @param enc: 二维码扫码签到校验码\n
+    @return:
+    """
+    # semaphore = asyncio.Semaphore(20)
+
+    # async with semaphore:
+    async with ClientSession(headers=HEADERS) as session:
+        return await cloud_sign.run(session=session,
+                                    username=username,
+                                    password=password,
+                                    schoolId=schoolid,
+                                    sckey=sckey,
+                                    enc=enc)
+
+
+@app.get('/updatecourseid')
+@app.post('/updatecourseid')
+async def update_courseid(username: str,
+                          password: str,
+                          schoolid: Optional[str] = None,
+                          sckey: Optional[str] = None) -> dict:
+    """
+    更新课程ID\n
+    @param username: 手机号 邮箱 学号\n
+    @param password: 密码\n
+    @param schoolid: 学校id[仅学号登录填写]\n
+    @param sckey: 废弃\n
+    @return:
+    """
+    async with ClientSession(headers=HEADERS) as session:
+        return await cloud_sign.run(session=session,
+                                    username=username,
+                                    password=password,
+                                    schoolId=schoolid,
+                                    sckey=sckey,
+                                    task_type='update')
+
+
+if __name__ == "__main__":
+    # uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=9090)
